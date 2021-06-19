@@ -147,6 +147,55 @@ function createContextMenu() {
                 .text-red {
                     color: red !important;
                 }
+
+                .ytmd-modal {
+                    display: none; /* Hidden by default */
+                    position: fixed; /* Stay in place */
+                    z-index: 99; /* Sit on top */
+                    left: 0;
+                    top: 0;
+                    width: 100%; /* Full width */
+                    height: 100%; /* Full height */
+                    background-color: rgb(0,0,0); /* Fallback color */
+                    background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+                    overflow: hidden
+                  }
+                  
+                  /* Modal Content */
+                  .ytmd-modal-content {
+                    background: #232323;
+                    font-family: Arial, Helvetica, sans-serif;
+                    padding: 20px;
+                    border: 1px solid #888;
+                    width: 80%;
+                    max-width: 300px;
+                    transition: 0.3s;
+                    color: white;
+                    opacity: 95%;
+                    font-size: 15px;
+                  }
+
+                  .ytmd-modal-content-title {
+                    color: white;
+                    opacity: 100% !important;
+                    margin: 0;
+                    width: 100%;
+                    font-size: 20px;
+                    padding-bottom: 5px;
+                  }
+                  .ytmd-modal-close {
+                    color: #aaaaaa;
+                    float: right;
+                    font-size: 28px;
+                    font-weight: bold;
+                  }
+                  
+                  .ytmd-modal-close:hover,
+                  .ytmd-modal-close:focus {
+                    color: #000;
+                    text-decoration: none;
+                    cursor: pointer;
+                  }
             `
             )
         )
@@ -270,22 +319,40 @@ function createTopMiddleContent() {
         )[0]
 
         // HISTORY BACK
-        const element = document.createElement('i')
-        element.id = 'ytmd_history_back'
-        element.classList.add(
+        const back_element = document.createElement('i')
+        back_element.id = 'ytmd_history_back'
+        back_element.classList.add(
             'material-icons',
             'pointer',
             'shine',
             'ytmd-icons',
             'center-content'
         )
-        element.innerText = 'keyboard_backspace'
+        back_element.innerText = 'keyboard_backspace'
 
-        element.addEventListener('click', function () {
+        back_element.addEventListener('click', function () {
             history.go(-1)
         })
 
-        center_content.prepend(element)
+        // HISTORY FORWARD
+        const forward_element = document.createElement('i')
+        forward_element.id = 'ytmd_history_forward'
+        forward_element.classList.add(
+            'material-icons',
+            'pointer',
+            'shine',
+            'ytmd-icons',
+            'center-content'
+        )
+        forward_element.style.cssText = 'transform: rotate(180deg);'
+        forward_element.innerText = 'keyboard_backspace'
+
+        forward_element.addEventListener('click', function () {
+            history.forward()
+        })
+
+        center_content.prepend(forward_element)
+        center_content.prepend(back_element)
     } catch (err) {
         console.error(err)
         ipcRenderer.send('log', {
@@ -301,6 +368,24 @@ function createTopRightContent() {
     // ADD BUTTONS TO RIGHT CONTENT (side to the photo)
     try {
         const right_content = document.getElementById('right-content')
+
+        //SHUTDOWN
+        const elementShutdown = document.createElement('i')
+        elementShutdown.id = 'ytmd_shutdown'
+        elementShutdown.title = translate('LABEL_SHUTDOWN')
+        elementShutdown.classList.add(
+            'material-icons',
+            'pointer',
+            'shine',
+            'ytmd-icons'
+        )
+        elementShutdown.innerText = 'power_settings_new'
+
+        elementShutdown.addEventListener('click', function () {
+            ipcRenderer.send('closed')
+        })
+
+        right_content.prepend(elementShutdown)
 
         // SETTINGS
         const elementSettings = document.createElement('i')
@@ -560,7 +645,7 @@ function createBottomPlayerBarContent() {
         setInterval(() => {
             const popup = document.querySelector('.ytmusic-menu-popup-renderer')
             let addLibrary
-            if (popup !== undefined) {
+            if (popup) {
                 addLibrary = Array.from(popup.children).filter(
                     (value) =>
                         value
@@ -656,6 +741,158 @@ function createBottomPlayerBarContent() {
         })
         playerBarRightControls.append(elementMiniplayer)
 
+        // Sleep timer
+        const elementSleepTimer = document.createElement('i')
+        elementSleepTimer.id = 'ytmd_sleeptimer'
+        elementSleepTimer.title = translate('SLEEPTIMER')
+        elementSleepTimer.classList.add(
+            'material-icons',
+            'pointer',
+            'ytmd-icons'
+        )
+        elementSleepTimer.innerText = 'timer'
+
+        const elementSleepTimerModal = document.createElement('div')
+        const elementSleepTimerModalContent = document.createElement('div')
+        const elementSleepTimerSet = document.createElement('button')
+        const elementSleepTimerClear = document.createElement('button')
+        const elementSleepTimerCloseModal = document.createElement('span')
+
+        elementSleepTimerModal.classList.add('ytmd-modal')
+        elementSleepTimerModal.id = 'ytmd_sleeptimer_modal'
+        elementSleepTimerModal.append(elementSleepTimerModalContent)
+
+        elementSleepTimerModalContent.innerHTML = `
+                <p class="ytmd-modal-content-title">${translate(
+                    'SLEEPTIMER'
+                )}</p>
+                <div> ${translate('SLEEP_BY_TIME')} 
+                    <br/>
+                    <input name='sleep_timer' type='radio' id='sleep-timer-30min' value='30'/>
+                    <label for='sleep-timer-30min'> 30${translate(
+                        'SLEEPTIMER_MINUTES'
+                    )}</label>
+                    <input name='sleep_timer' type='radio' id='sleep-timer-1h' value='60'/>
+                    <label for='sleep-timer-1h'>60${translate(
+                        'SLEEPTIMER_MINUTES'
+                    )}</label>
+                    <input name='sleep_timer' type='radio' id='sleep-timer-2h' value='120'/>
+                    <label for='sleep-timer-2h'>120${translate(
+                        'SLEEPTIMER_MINUTES'
+                    )}</label>
+                    <br/><input name='sleep_timer' type='radio' id='sleep-timer-customized'/>
+                    <input id='sleep-timer-minutes' for='sleep-timer-customized' style='width: 40px'/>
+                    <label for='sleep-timer-minutes'>${translate(
+                        'SLEEPTIMER_MINUTES'
+                    )}</>
+                </div>
+                <div style='margin-top: 15px;'> ${translate('SLEEP_BY_COUNTER')}
+                    <br/>
+                    <input name='sleep_timer' type='radio' id='sleep-timer-5c' value='5c'/>
+                    <label for='sleep-timer-5c'>5</label>
+                    <input name='sleep_timer' type='radio' id='sleep-timer-10c' value='10c'/>
+                    <label for='sleep-timer-10c'>10</label>
+                    <input name='sleep_timer' type='radio' id='sleep-timer-30c' value='30c'/>
+                    <label for='sleep-timer-30c'>30</label>
+                    <br/><input name='sleep_timer' type='radio' id='sleep-timer-customized-c' />
+                    <input id='sleep-timer-songs' for='sleep-timer-customized-c' style='width: 40px'/>
+                    <label for='sleep-timer-songs'>${translate(
+                        'SLEEPTIMER_SONGS'
+                    )}</>
+                </div>
+        `
+        elementSleepTimerModalContent.append(elementSleepTimerSet)
+        elementSleepTimerModalContent.append(elementSleepTimerClear)
+
+        elementSleepTimerModalContent.prepend(elementSleepTimerCloseModal)
+
+        elementSleepTimer.addEventListener('click', (e) => {
+            ipcRenderer.send('retrieve-sleep-timer')
+            elementSleepTimerModal.style.display = 'block'
+            elementSleepTimerModalContent.style.marginLeft = e.x + 'px' // pop out at mouse position
+            elementSleepTimerModalContent.style.marginTop = e.y + 'px'
+            elementSleepTimerModalContent.style.transform =
+                'translate(-50%, -50%) scale(0)' // animation
+            setTimeout(() => {
+                elementSleepTimerModalContent.style.transform =
+                    'translate(-100%, -100%) scale(1)'
+            }, 10) // animation
+        })
+
+        elementSleepTimerCloseModal.innerHTML = '&times;'
+        elementSleepTimerCloseModal.classList.add('ytmd-modal-close')
+        elementSleepTimerCloseModal.addEventListener('click', () => {
+            elementSleepTimerModal.style.display = 'none'
+        })
+        elementSleepTimerModal.addEventListener('click', (e) => {
+            if (e.target === elementSleepTimerModal)
+                elementSleepTimerModal.style.display = 'none' // close modal
+        })
+
+        elementSleepTimerModalContent.classList.add('ytmd-modal-content')
+
+        elementSleepTimerSet.innerText = translate('SLEEPTIMER_SET')
+
+        elementSleepTimerSet.addEventListener('click', () => {
+            var value = document.querySelector(
+                'input[name="sleep_timer"]:checked'
+            ).value
+            if (value) {
+                ipcRenderer.send('set-sleep-timer', { value: value })
+                elementSleepTimerModal.style.display = 'none'
+            }
+        })
+
+        elementSleepTimerClear.innerText = translate('SLEEPTIMER_CLEAR')
+        elementSleepTimerClear.style.marginLeft = '15px'
+        elementSleepTimerClear.addEventListener('click', () => {
+            ipcRenderer.send('set-sleep-timer', { value: 0 })
+            elementSleepTimerModal.style.display = 'none'
+        })
+        playerBarRightControls.append(elementSleepTimer)
+        document.body.append(elementSleepTimerModal)
+
+        document.getElementById(
+            'sleep-timer-minutes'
+        ).onkeydown = document.getElementById( // use the same function when change/keydown
+            'sleep-timer-minutes'
+        ).onchange = (e) => {
+            var radio = document.getElementById('sleep-timer-customized')
+            radio.checked = true
+            radio.value = parseInt(e.target.value)
+        }
+
+        document.getElementById(
+            'sleep-timer-songs'
+        ).onkeydown = document.getElementById('sleep-timer-songs').onchange = ( // use the same function when change/keydown
+            e
+        ) => {
+            var radio = document.getElementById('sleep-timer-customized-c')
+            radio.checked = true
+            radio.value = parseInt(e.target.value) + 'c'
+        }
+
+        ipcRenderer.on('sleep-timer-info', (_, mode, counter) => {
+            if (mode == 'time') {
+                elementSleepTimerClear.disabled = false
+                elementSleepTimerSet.innerText = translate('SLEEPTIMER_RESET')
+                var radio = document.getElementById('sleep-timer-customized')
+                radio.checked = true
+                radio.value = counter
+                document.getElementById('sleep-timer-minutes').value = counter
+            } else if (mode == 'counter') {
+                elementSleepTimerClear.disabled = false
+                elementSleepTimerSet.innerText = translate('SLEEPTIMER_RESET')
+                var radio = document.getElementById('sleep-timer-customized-c')
+                radio.checked = true
+                radio.value = counter
+                document.getElementById('sleep-timer-songs').value = counter
+            } else {
+                elementSleepTimerClear.disabled = true
+                elementSleepTimerSet.innerText = translate('SLEEPTIMER_SET')
+            }
+        })
+
         if (shortcutButtons.miniplayer)
             document.querySelector('#ytmd_miniplayer').classList.remove('hide')
 
@@ -698,8 +935,38 @@ function playerBarScrollToChangeVolume() {
     try {
         const playerBar = document.getElementsByTagName('ytmusic-player-bar')[0]
 
+        const volumeSlider = document.getElementById('volume-slider')
+        let isVolumeSliderHovered = false
+        volumeSlider.addEventListener(
+            'mouseover',
+            () => (isVolumeSliderHovered = true)
+        )
+        volumeSlider.addEventListener(
+            'mouseout',
+            () => (isVolumeSliderHovered = false)
+        )
+
+        const expandVolumeSlider = document.getElementById(
+            'expand-volume-slider'
+        )
+        let isExpandVolumeSliderHovered = false
+        expandVolumeSlider.addEventListener(
+            'mouseover',
+            () => (isExpandVolumeSliderHovered = true)
+        )
+        expandVolumeSlider.addEventListener(
+            'mouseout',
+            () => (isExpandVolumeSliderHovered = false)
+        )
+
+        const isSliderHovered = () =>
+            isExpandVolumeSliderHovered || isVolumeSliderHovered
+
         playerBar.addEventListener('wheel', (ev) => {
             ev.preventDefault()
+            if (!settingsGet('settings-decibel-volume') && isSliderHovered()) {
+                return
+            }
 
             if (ev.deltaY < 0)
                 ipcRenderer.send('media-command', {

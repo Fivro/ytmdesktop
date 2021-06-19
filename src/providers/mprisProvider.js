@@ -10,11 +10,12 @@ class Mpris {
 
     start() {
         this.player = new mpris({
-            name: 'youtubemusic',
+            name: 'youtube-music-desktop-app',
             identity: 'Youtube Music',
             supportedUriSchemes: ['file'],
             supportedMimeTypes: ['audio/mpeg', 'application/ogg'],
             supportedInterfaces: ['player'],
+            canRaise: true,
         })
 
         this._setInitialEvents()
@@ -36,7 +37,9 @@ class Mpris {
     setActivity(info) {
         if (this._isInitialized) {
             this.player.metadata = {
-                'mpris:trackid': this.player.objectPath('track/0'),
+                'mpris:trackid': this.player
+                    .objectPath('track/0')
+                    .replaceAll('-', '_'), // replacing -'s in name with _ to meet dbus object name spec
                 'mpris:length': info.track.duration * 1000 * 1000, // In microseconds
                 'mpris:artUrl': info.track.cover,
                 'xesam:title': info.track.title,
@@ -75,6 +78,10 @@ class Mpris {
                 command: 'media-seekbar-set',
                 value: args.position / (1000 * 1000),
             })
+        })
+
+        this.player.on('raise', () => {
+            ipcMain.emit('show', null)
         })
 
         this.player.on('seek', (offset) => {

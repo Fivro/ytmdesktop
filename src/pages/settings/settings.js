@@ -16,6 +16,10 @@ const elementBtnLastFmLogin = document.getElementById('btn-last-fm-login')
 const elementBtnOpenCompanionServer = document.getElementById(
     'btn-open-companion-server'
 )
+const elementBtnOpenGeniusAuthServer = document.getElementById(
+    'btn-open-genius-auth-server'
+)
+
 const elementBtnDiscordSettings = document.getElementById('btn-discord-setting')
 
 const elementBtnShortcutButtonsSettings = document.getElementById(
@@ -113,6 +117,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initElement('settings-start-on-boot', 'click', null)
     initElement('settings-start-minimized', 'click', null)
     initElement('settings-companion-server', 'click', checkCompanionStatus)
+    initElement('settings-genius-auth-server', 'click', null)
     initElement('settings-companion-server-protect', 'click', null)
     initElement('settings-windows10-media-service', 'click', () => {
         checkWindows10ServiceStatus()
@@ -126,8 +131,14 @@ document.addEventListener('DOMContentLoaded', () => {
     initElement('settings-shiny-tray', 'click', () => {
         ipc.send('update-tray')
     })
-    initElement('settings-discord-rich-presence', 'click', null)
-    initElement('settings-app-language', 'change', showRelaunchButton)
+    initElement('settings-shiny-tray-song-title-rollable', 'click', () => {
+        ipc.send('update-tray')
+    })
+    initElement('settings-discord-rich-presence', 'click', showRelaunchButton)
+    initElement('settings-app-language', 'change', () => {
+        ipc.send('language-updated')
+        showRelaunchButton()
+    })
     initElement('settings-clipboard-read', 'click', () => {
         ipc.send('switch-clipboard-watcher')
         checkClipboardWatcherStatus()
@@ -168,7 +179,9 @@ document.addEventListener('DOMContentLoaded', () => {
     initElement('settings-miniplayer-show-task', 'click', null)
     initElement('settings-miniplayer-always-show-controls', 'click', null)
     initElement('settings-miniplayer-paint-controls', 'click', null)
-    initElement('settings-enable-taskbar-progressbar', 'click', null)
+    initElement('settings-enable-taskbar-progressbar', 'click', () => {
+        ipc.send('refresh-progress')
+    })
     initElement('settings-enable-player-bgcolor', 'click', () => {
         ipc.send('set-accent-enabled-state')
     })
@@ -180,6 +193,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     initElement('settings-clipboard-always-ask-read', 'click', null)
     initElement('settings-tray-icon', 'click', showRelaunchButton)
+    initElement('settings-pause-on-suspend', 'click', null)
     mInit()
 
     document.getElementById('content').classList.remove('hide')
@@ -193,8 +207,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
 if (elementRangeZoom) {
     elementRangeZoom.addEventListener('input', () => {
-        document.getElementById('range-zoom-value').innerText = this.value
-        settingsProvider.set('settings-page-zoom', this.value)
+        document.getElementById('range-zoom-value').innerText =
+            elementRangeZoom.value
+        settingsProvider.set('settings-page-zoom', elementRangeZoom.value)
     })
 }
 
@@ -202,8 +217,14 @@ if (elementRangeSkipTrackShorterThan)
     elementRangeSkipTrackShorterThan.addEventListener('input', () => {
         document.getElementById(
             'range-skip-track-shorter-than-value'
-        ).innerText = this.value === 0 ? `(Disabled) ${this.value}` : this.value
-        settingsProvider.set('settings-skip-track-shorter-than', this.value)
+        ).innerText =
+            elementRangeSkipTrackShorterThan.value === 0
+                ? `(Disabled) ${elementRangeSkipTrackShorterThan.value}`
+                : elementRangeSkipTrackShorterThan.value
+        settingsProvider.set(
+            'settings-skip-track-shorter-than',
+            elementRangeSkipTrackShorterThan.value
+        )
     })
 
 if (elementBtnOpenPageEditor)
@@ -229,6 +250,11 @@ if (elementBtnShortcutButtonsSettings)
 if (elementBtnOpenCompanionServer)
     elementBtnOpenCompanionServer.addEventListener('click', async () => {
         await shell.openExternal(`http://localhost:9863`)
+    })
+
+if (elementBtnOpenGeniusAuthServer)
+    elementBtnOpenGeniusAuthServer.addEventListener('click', async () => {
+        await shell.openExternal(`http://localhost:9864/login`)
     })
 
 if (elementBtnAppRelaunch)
@@ -276,8 +302,6 @@ function showRelaunchButton() {
  * @param {*} fn
  */
 function initElement(elementName, eventType, fn) {
-    if (fn === undefined) fn = () => {}
-
     const element = document.getElementById(elementName)
 
     if (element) {
@@ -294,10 +318,10 @@ function initElement(elementName, eventType, fn) {
  * @param {*} fn
  */
 function createListener(element, settingsName, eventType, fn) {
-    element.addEventListener(eventType, () => {
+    element.addEventListener(eventType, (e) => {
         switch (eventType) {
             case 'click':
-                settingsProvider.set(settingsName, this.checked)
+                settingsProvider.set(settingsName, e.target.checked)
                 /*ipc.send('settings-value-changed', {
                     key: settingsName,
                     value: this.checked,
@@ -305,14 +329,14 @@ function createListener(element, settingsName, eventType, fn) {
                 break
 
             case 'change':
-                settingsProvider.set(settingsName, this.value)
+                settingsProvider.set(settingsName, e.target.value)
                 /*ipc.send('settings-value-changed', {
                     key: settingsName,
                     value: this.value,
                 })*/
                 break
         }
-        fn()
+        fn && fn()
     })
 }
 
@@ -603,4 +627,11 @@ document.querySelector('#disableAccelerator').addEventListener('click', () => {
 
 document.querySelector('#release-notes').addEventListener('click', () => {
     ipc.send('window', { command: 'show-changelog' })
+})
+
+document.querySelectorAll('[externalURL]').forEach((element) => {
+    var externalURL = element.getAttribute('externalURL')
+    element.addEventListener('click', () => {
+        shell.openExternal(externalURL)
+    })
 })
